@@ -13,6 +13,7 @@ from ..data.dataloading import DataLoader, worker_init_reset_seed
 from ..data.datasets.coco import COCODataset
 from ..data.datasets.mosaicdetection import MosaicDetection
 from ..data.samplers import InfiniteSampler, YoloBatchSampler
+from ..evaluators.coco_evaluator import COCOEvaluator
 from ..modules.yolo_head import YOLOXHead
 from ..modules.yolo_pafpn import YOLOPAFPN
 from ..modules.yolox import YOLOX
@@ -31,7 +32,8 @@ class Exp(BaseExp):
 
         # ---------------- dataloader config ---------------- #
         # set worker to 4 for shorter dataloader init time
-        self.data_num_workers = 4
+        # CHANGED: orginal value is 4
+        self.data_num_workers = 0
         self.input_size = (640, 640)  # (height, width)
         # Actual multiscale ranges: [640-5*32, 640+5*32].
         # To disable multiscale training, set the

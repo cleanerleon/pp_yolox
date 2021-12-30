@@ -71,14 +71,17 @@ class Trainer:
         iter_start_time = time.time()
 
         # inps, targets = self.prefetcher.next()
-        inps, targets = self.train_loader.next()
+        try:
+            inps, targets, _, _ = next(self.loader)
+        except StopIteration:
+            inps, targets = None, None
         inps = inps.astype(self.data_type)
         targets = targets.astype(self.data_type)
-        targets.stop_gradient(True)
+        targets.stop_gradient = True
         inps, targets = self.exp.preprocess(inps, targets, self.input_size)
         data_end_time = time.time()
 
-        with paddle.amp.auto_cast(enabled=self.amp_training):
+        with paddle.amp.auto_cast(enable=self.amp_training):
             outputs = self.model(inps, targets)
 
         loss = outputs["total_loss"]
@@ -127,6 +130,7 @@ class Trainer:
             batch_size=self.args.batch_size,
             no_aug=self.no_aug,
         )
+        self.loader = iter(self.train_loader)
         # logger.info("init prefetcher, this might take one minute or less...")
         # self.prefetcher = DataPrefetcher()
         # max_iter means iters per epoch

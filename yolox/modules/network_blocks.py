@@ -166,7 +166,7 @@ class CSPLayer(nn.Layer):
         x_1 = self.conv1(x)
         x_2 = self.conv2(x)
         x_1 = self.m(x_1)
-        x = paddle.concat((x_1, x_2), aixs=1)
+        x = paddle.concat((x_1, x_2), axis=1)
         return self.conv3(x)
 
 

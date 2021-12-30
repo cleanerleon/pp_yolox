@@ -5,6 +5,7 @@
 import os
 import random
 import uuid
+from multiprocessing import cpu_count
 
 import numpy as np
 import paddle
@@ -52,6 +53,10 @@ class DataLoader(ppDataLoader):
                         'timeout',
                         'worker_init_fn'])
         nkwargs = {k: v for k, v in kwargs.items() if k in def_args}
+        if nkwargs.get('use_shared_memory') is False:
+            nkwargs['use_shared_memory'] = True
+        # if nkwargs.get('num_workers', 0) == 0:
+        #     nkwargs['num_workers'] = cpu_count()
         super().__init__(*args, **nkwargs)
         # super().__init__(*args, **kwargs)
         self.__initialized = False
@@ -76,6 +81,7 @@ class DataLoader(ppDataLoader):
             batch_sampler = YoloBatchSampler(
                 None,
                 sampler,
+                False,
                 self.batch_size,
                 self.drop_last,
                 input_dimension=self.dataset.input_dim,
