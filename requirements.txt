@@ -2,3 +2,6 @@ numpy
 paddlepaddle
 loguru
 tabulate
+opencv_python
+pycocotools
+tqdm
