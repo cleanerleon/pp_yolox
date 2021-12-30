@@ -180,7 +180,7 @@ class YOLOXHead(nn.Layer):
                 x_shifts.append(grid[:, :, 0])
                 y_shifts.append(grid[:, :, 1])
                 expanded_strides.append(
-                    paddle.zeros(1, grid.shape[1])
+                    paddle.zeros([1, grid.shape[1]])
                     .fill_(stride_this_level)
                     .astype(xin[0].dtype)
                 )
@@ -493,7 +493,7 @@ class YOLOXHead(nn.Layer):
             F.one_hot(gt_classes.astype(paddle.int64), self.num_classes)
             .astype(float)
             .unsqueeze(1)
-            .expand([1, num_in_boxes_anchor, 1])
+            .tile([1, num_in_boxes_anchor, 1])
         )
         pair_wise_ious_loss = -paddle.log(pair_wise_ious + 1e-8)
 
@@ -508,8 +508,8 @@ class YOLOXHead(nn.Layer):
         #     pair_wise_cls_loss = F.binary_cross_entropy(
         #         cls_preds_.sqrt_(), gt_cls_per_image, reduction="none"
         #     ).sum(-1)
-        v0 = cls_preds_.astype(float).unsqueeze(0).expand((num_gt, 1, 1))
-        v1 = obj_preds_.astype(float).unsqueeze(0).expand((num_gt, 1, 1))
+        v0 = cls_preds_.astype(float).unsqueeze(0).tile((num_gt, 1, 1))
+        v1 = obj_preds_.astype(float).unsqueeze(0).tile((num_gt, 1, 1))
         v0 = 1 / (1 + paddle.exp(-v0))
         v1 = 1 / (1 + paddle.exp(-v1))
         cls_preds_ = v0 * v1
@@ -561,33 +561,33 @@ class YOLOXHead(nn.Layer):
         x_centers_per_image = (
             (x_shifts_per_image + 0.5 * expanded_strides_per_image)
             .unsqueeze(0)
-            .expand((num_gt, 1))
+            .tile((num_gt, 1))
         )  # [n_anchor] -> [n_gt, n_anchor]
         y_centers_per_image = (
             (y_shifts_per_image + 0.5 * expanded_strides_per_image)
             .unsqueeze(0)
-            .expand((num_gt, 1))
+            .tile((num_gt, 1))
         )
 
         gt_bboxes_per_image_l = (
             (gt_bboxes_per_image[:, 0] - 0.5 * gt_bboxes_per_image[:, 2])
             .unsqueeze(1)
-            .expand((1, total_num_anchors))
+            .tile((1, total_num_anchors))
         )
         gt_bboxes_per_image_r = (
             (gt_bboxes_per_image[:, 0] + 0.5 * gt_bboxes_per_image[:, 2])
             .unsqueeze(1)
-            .expand((1, total_num_anchors))
+            .tile((1, total_num_anchors))
         )
         gt_bboxes_per_image_t = (
             (gt_bboxes_per_image[:, 1] - 0.5 * gt_bboxes_per_image[:, 3])
             .unsqueeze(1)
-            .expand((1, total_num_anchors))
+            .tile((1, total_num_anchors))
         )
         gt_bboxes_per_image_b = (
             (gt_bboxes_per_image[:, 1] + 0.5 * gt_bboxes_per_image[:, 3])
             .unsqueeze(1)
-            .expand((1, total_num_anchors))
+            .tile((1, total_num_anchors))
         )
 
         b_l = x_centers_per_image - gt_bboxes_per_image_l
@@ -596,22 +596,22 @@ class YOLOXHead(nn.Layer):
         b_b = gt_bboxes_per_image_b - y_centers_per_image
         bbox_deltas = paddle.stack([b_l, b_t, b_r, b_b], 2)
 
-        is_in_boxes = bbox_deltas.min(axis=-1).values > 0.0
+        is_in_boxes = bbox_deltas.min(axis=-1) > 0.0
         is_in_boxes_all = is_in_boxes.sum(axis=0) > 0
         # in fixed center
 
         center_radius = 2.5
 
-        gt_bboxes_per_image_l = (gt_bboxes_per_image[:, 0]).unsqueeze(1).expand(
+        gt_bboxes_per_image_l = (gt_bboxes_per_image[:, 0]).unsqueeze(1).tile(
             (1, total_num_anchors)
         ) - center_radius * expanded_strides_per_image.unsqueeze(0)
-        gt_bboxes_per_image_r = (gt_bboxes_per_image[:, 0]).unsqueeze(1).expand(
+        gt_bboxes_per_image_r = (gt_bboxes_per_image[:, 0]).unsqueeze(1).tile(
             (1, total_num_anchors)
         ) + center_radius * expanded_strides_per_image.unsqueeze(0)
-        gt_bboxes_per_image_t = (gt_bboxes_per_image[:, 1]).unsqueeze(1).expand(
+        gt_bboxes_per_image_t = (gt_bboxes_per_image[:, 1]).unsqueeze(1).tile(
             (1, total_num_anchors)
         ) - center_radius * expanded_strides_per_image.unsqueeze(0)
-        gt_bboxes_per_image_b = (gt_bboxes_per_image[:, 1]).unsqueeze(1).expand(
+        gt_bboxes_per_image_b = (gt_bboxes_per_image[:, 1]).unsqueeze(1).tile(
             (1, total_num_anchors)
         ) + center_radius * expanded_strides_per_image.unsqueeze(0)
 
@@ -620,14 +620,14 @@ class YOLOXHead(nn.Layer):
         c_t = y_centers_per_image - gt_bboxes_per_image_t
         c_b = gt_bboxes_per_image_b - y_centers_per_image
         center_deltas = paddle.stack([c_l, c_t, c_r, c_b], 2)
-        is_in_centers = center_deltas.min(axis=-1).values > 0.0
+        is_in_centers = center_deltas.min(axis=-1) > 0.0
         is_in_centers_all = is_in_centers.sum(axis=0) > 0
 
         # in boxes and in centers
         is_in_boxes_anchor = is_in_boxes_all | is_in_centers_all
 
-        is_in_boxes_and_center = (
-            is_in_boxes[:, is_in_boxes_anchor] & is_in_centers[:, is_in_boxes_anchor]
+        is_in_boxes_and_center = paddle.to_tensor(
+            is_in_boxes.numpy()[:, is_in_boxes_anchor] & is_in_centers.numpy()[:, is_in_boxes_anchor]
         )
         return is_in_boxes_anchor, is_in_boxes_and_center
 
