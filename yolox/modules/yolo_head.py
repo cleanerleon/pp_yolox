@@ -634,10 +634,10 @@ class YOLOXHead(nn.Layer):
     def dynamic_k_matching(self, cost, pair_wise_ious, gt_classes, num_gt, fg_mask):
         # Dynamic K
         # ---------------------------------------------------------------
-        matching_matrix = paddle.zeros_like(cost, dtype=paddle.uint8)
+        matching_matrix = paddle.zeros_like(cost, dtype='int32')
 
         ious_in_boxes_matrix = pair_wise_ious
-        n_candidate_k = min(10, ious_in_boxes_matrix.size(1))
+        n_candidate_k = min(10, ious_in_boxes_matrix.shape[1])
         topk_ious, _ = paddle.topk(ious_in_boxes_matrix, n_candidate_k, axis=1)
         dynamic_ks = paddle.clip(topk_ious.sum(1).astype(int), min=1)
         dynamic_ks = dynamic_ks.tolist()

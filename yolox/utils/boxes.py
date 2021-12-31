@@ -97,11 +97,11 @@ def bboxes_iou(bboxes_a, bboxes_b, xyxy=True):
         area_a = paddle.prod(bboxes_a[:, 2:] - bboxes_a[:, :2], 1)
         area_b = paddle.prod(bboxes_b[:, 2:] - bboxes_b[:, :2], 1)
     else:
-        tl = paddle.max(
+        tl = paddle.maximum(
             (bboxes_a[:, None, :2] - bboxes_a[:, None, 2:] / 2),
             (bboxes_b[:, :2] - bboxes_b[:, 2:] / 2),
         )
-        br = paddle.min(
+        br = paddle.maximum(
             (bboxes_a[:, None, :2] + bboxes_a[:, None, 2:] / 2),
             (bboxes_b[:, :2] + bboxes_b[:, 2:] / 2),
         )
