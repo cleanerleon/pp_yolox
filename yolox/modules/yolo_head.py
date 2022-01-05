@@ -642,7 +642,7 @@ class YOLOXHead(nn.Layer):
         dynamic_ks = paddle.clip(topk_ious.sum(1).astype(int), min=1)
         dynamic_ks = dynamic_ks.tolist()
         for gt_idx in range(num_gt):
-            _, pos_idx = paddle.topk(cost[gt_idx], k=dynamic_ks[gt_idx], largest=False)
+            _, pos_idx = paddle.topk(cost[gt_idx], k=min(dynamic_ks[gt_idx], cost[gt_idx].shape[0]), largest=False)
             matching_matrix[gt_idx][pos_idx] = 1
 
         del topk_ious, dynamic_ks, pos_idx
@@ -655,7 +655,9 @@ class YOLOXHead(nn.Layer):
         fg_mask_inboxes = matching_matrix.sum(0) > 0
         num_fg = fg_mask_inboxes.sum().item()
 
-        fg_mask[fg_mask.clone()] = fg_mask_inboxes
+        fg_mask_np = fg_mask.numpy()
+        fg_mask_np[fg_mask_np] = fg_mask_inboxes
+        fg_mask = paddle.to_tensor(fg_mask_np)
 
         matched_gt_inds = matching_matrix[:, fg_mask_inboxes].argmax(0)
         gt_matched_classes = gt_classes[matched_gt_inds]
